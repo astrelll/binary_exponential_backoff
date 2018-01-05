@@ -1,5 +1,5 @@
-## binary_exponential_backoff
-# Assembly of the project with use of cmake:
+# Binary exponential backoff
+## Assembly of the project with use of cmake:
 ```
 mkdir build/
 cd build
