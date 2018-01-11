@@ -5,12 +5,20 @@
 #include <list>
 
 #define LOG if(view)
-//int number_application = 10000;
-//int number_subscriber = 40;
-int number_application = 0;
-int number_subscriber = 128;
-double probability_min = 1.0 / 128;
+int number_application = 0; // don't touch
+int number_subscriber = 64;
+bool fight_against_occupation_channel = true; // true - есть борьба с захватом канала
+uint32_t ttl = 200000;
+double probability_min = 1.0 / number_subscriber;
 bool view = false;
+
+/*            if (existence_occupation_channel) {
+                prob[hero] = 1;
+            } else {
+                if (appl[hero] > 1) {
+                    prob[hero] = 0.5;
+                }
+            }*/
 
 uint32_t
 get_puasson_value(double lambda) {
@@ -28,13 +36,13 @@ get_puasson_value(double lambda) {
 }
 
 std::vector<uint32_t>
-*generation_queue_of_applications(double lambda, uint32_t max_time) {
+*generation_queue_of_applications(double lambda) {
     std::vector<uint32_t> *queue_of_applications = new std::vector<uint32_t>;
 
     int counter_application = 0;
     uint32_t tmp;
     uint32_t time = 0;
-    while (time < max_time) {
+    while (time < ttl) {
         tmp = get_puasson_value(lambda);
         counter_application += tmp;
         queue_of_applications->push_back(tmp);
@@ -44,14 +52,6 @@ std::vector<uint32_t>
     number_application = counter_application;
 //    std::cout << "Size of counter_application = " << counter_application << std::endl;
     return queue_of_applications;
-}
-
-int
-weight_vector(uint32_t *timepoint) {
-    int weight = 0;
-    for (int i = 0; i < number_subscriber; i++)
-        weight += timepoint[i];
-    return weight;
 }
 
 void
@@ -91,9 +91,8 @@ send(double probability) {
 }
 
 void
-simulation_of_queue_application(uint32_t **&subscribers, u_long &quantity_of_windows, double lambda,
-                                uint32_t max_time) {
-    std::vector<uint32_t> *queue_of_applications = generation_queue_of_applications(lambda, max_time);
+simulation_of_queue_application(uint32_t **&subscribers, u_long &quantity_of_windows, double lambda) {
+    std::vector<uint32_t> *queue_of_applications = generation_queue_of_applications(lambda);
     uint32_t *timepoint = new uint32_t[number_subscriber];
     subscribers = new uint32_t *[number_subscriber];
 
@@ -118,14 +117,13 @@ simulation_of_queue_application(uint32_t **&subscribers, u_long &quantity_of_win
 }
 
 void
-binary_exponential_backof(double lambda, double probability_min, double &stream_out, double &average_delay,
-                          uint32_t max_time) {
+binary_exponential_backof(double lambda, double probability_min, double &stream_out, double &average_delay) {
     int number_application_out = 0;
     uint32_t **subscribers = NULL;
     u_long quantity_of_windows;
     average_delay = 0;
 
-    simulation_of_queue_application(subscribers, quantity_of_windows, lambda, max_time);
+    simulation_of_queue_application(subscribers, quantity_of_windows, lambda);
 
     uint32_t **out = new uint32_t *[number_subscriber];
     for (int i = 0; i < number_subscriber; i++) {
@@ -148,11 +146,6 @@ binary_exponential_backof(double lambda, double probability_min, double &stream_
             print_subscriber(out[i], quantity_of_windows, i);
         }
     }
-//    if(lambda == 0.08){
-//        for (int i = 0; i < number_subscriber; i++) {
-//            print_subscriber(subscribers[i], 100, i);
-//        }
-//    }
 
     int tmp;
     double *prob = new double[number_subscriber];
@@ -295,7 +288,6 @@ binary_exponential_backof(double lambda, double probability_min, double &stream_
     delete[] senders;
     delete[] prob;
 
-
     LOG std::cout << "\t\tSuccessful termination of an algorithm" <<
                   std::endl;
 }
@@ -308,7 +300,7 @@ int main() {
 
     if (test) {
         view = true;
-        binary_exponential_backof(0.8, probability_min, stream_out, delay, 10);
+        binary_exponential_backof(0.8, probability_min, stream_out, delay);
     } else {
         system("mkdir -p streams/");
         system("mkdir -p delays/");
@@ -325,7 +317,7 @@ int main() {
         for (double lambda = 0.01; lambda < lambda_max; lambda += 0.01) {
             stream_out = 0;
             delay = 0;
-            binary_exponential_backof(lambda, probability_min, stream_out, delay, 100000);
+            binary_exponential_backof(lambda, probability_min, stream_out, delay);
             fprintf(fileStream, "%f,", stream_out);
             fprintf(fileDelay, "%f,", delay);
             std::cout << "stream in = " << lambda << "\t\t\tstream out = " << stream_out <<
